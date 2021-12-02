@@ -1,0 +1,132 @@
+---
+- name: Expert cheking git-repository
+  hosts: localhost
+  become: yes
+  gather_facts: no
+  tasks:
+          - name: ==========================Checking that the Git repository is cloned==========================
+            stat:
+                    path: /wsr-skillcloud
+            register: file_git_repository
+
+          - debug:
+                  msg: "SUCCESS"
+            when: file_git_repository.stat.exists
+
+          - debug:
+                  msg: "NO SUCCESS"
+            when: file_git_repository.stat.exists == False
+
+          - name: ==========================Connection VM==========================
+            shell: "ansible all -m ping "
+            register: conn_vm
+
+          - debug: var=conn_vm.stdout_lines
+
+- name: Expert Ansible tasks
+  hosts: all
+  become: yes
+  gather_facts: no
+  tasks:
+          - name: ==========================Checking that the curl package is installed==========================
+            package_facts:
+                   manager: "auto"
+
+          - debug:
+                  msg: "SUCCESS"
+            when: "'curl' in ansible_facts.packages"
+
+          - debug:
+                 msg: "NO SUCCESS"
+            when: "'curl' not in ansible_facts.packages"
+
+          - name: ==========================Checking that the docker package is installed==========================
+            package_facts:
+                   manager: "auto"
+
+          - debug:
+                  msg: "SUCCESS"
+            when: "'docker-ce' in ansible_facts.packages"
+
+          - debug:
+                 msg: "NO SUCCESS"
+            when: "'docker-ce' not in ansible_facts.packages"
+
+          - name: ==========================Checking that ufw is activated==========================
+            shell: ufw status | grep Status
+            register: "ufw_check"
+
+          - debug: var=ufw_check.stdout_lines
+
+          - name: ==========================Checking open ufw ports==========================
+            shell: "ufw status"
+            register: ufw_ports_allow
+
+          - debug: var=ufw_ports_allow.stdout_lines
+
+          - name: ==========================Check if port is open for SSH==========================
+            shell: "grep Port /etc/ssh/sshd_config | grep -n 1"
+            register: ssh_port
+
+          - debug: var=ssh_port.stdout_lines
+
+          - name: ==========================Checking if public key authorization is allowed==========================
+            shell: "grep PubkeyAuthentication /etc/ssh/sshd_config"
+            register: pubkey_allowed
+
+          - debug: var=pubkey_allowed.stdout_lines
+
+          - name: ==========================Checking if users are created==========================
+            shell: "sed 's/:.*//' /etc/passwd | grep Webdeveloper && sed 's/:.*//' /etc/passwd | grep Devopsengineer && sed 's/:.*//' /etc/passwd | grep Projectmanager"
+            register: check_users_created
+
+          - debug: var=check_users_created.stdout_lines
+
+          - name: ==========================Keys check==========================
+            shell: "cat /home/Webdeveloper/.ssh/authorized_keys && cat /home/Devopsengineer/.ssh/authorized_keys && cat /home/Projectmanager/.ssh/authorized_keys"
+            register: keys_check
+
+          - debug: var=keys_check.stdout_lines
+
+          - name: ==========================Checking that docker-compose is installed using the docker-compose script==========================
+            shell: "whereis docker-compose"
+            register: compose_sh
+
+          - debug: var=compose_sh.stdout_lines
+
+          - name: ==========================Verifying that the skillcloud-nginx directory has been created==========================
+            stat:
+                    path: /skillcloud-nginx
+            register: skillcloud_directory
+
+          - debug:
+                  msg: "SUCCESS"
+            when: skillcloud_directory.stat.exists
+
+          - debug:
+                  msg: "NO SUCCESS"
+            when: skillcloud_directory.stat.exists == False
+
+          - name: ==========================Checking if files were copied to virtual machines==========================
+            shell: "ls /skillcloud-nginx"
+            register: copy_files_skillcloud_nginx
+
+          - debug: var=copy_files_skillcloud_nginx.stdout_lines
+
+          - name: ==========================Checking if SSH daemon has been restarted==========================
+            shell: "systemctl show sshd | grep ExecMainStartTimestamp="
+            register: sshd_time_restarted
+
+          - debug: var=sshd_time_restarted.stdout_lines
+
+          - name: ==========================Checking if SSH daemon has been restarted==========================
+            shell: "systemctl show ufw | grep ExecMainStartTimestamp="
+            register: ufw_time_restarted
+
+          - debug: var=ufw_time_restarted.stdout_lines
+
+          - name: ==========================Checking restarted VM==========================
+            shell: "uptime -s"
+            register: restarted_vm
+
+          - debug: var=restarted_vm.stdout_lines
